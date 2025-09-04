@@ -1,7 +1,6 @@
-import { loadAppointments, saveAppointments } from './storage.js';
-
 document.addEventListener('DOMContentLoaded', function() {
-    let appointments = loadAppointments();
+    // Carregar consultas do localStorage ao iniciar
+    let appointments = JSON.parse(localStorage.getItem('consultasMedicas')) || [];
     
     // Elementos do DOM
     const appointmentForm = document.getElementById('appointmentForm');
@@ -50,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Criar e salvar consulta
         const appointment = createAppointment(name, cpf, specialty, date, time);
         appointments.push(appointment);
-        saveAppointments(appointments);
+        saveAppointments();
         
         // Feedback e atualização
         showSuccessMessage(name);
@@ -61,12 +60,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function validateForm(name, cpf, specialty, date, time) {
         if (!name || !cpf || !specialty || !date || !time) {
-            showValidationError('Por favor, preencha todos os campos!');
+            alert('Por favor, preencha todos os campos!');
             return false;
         }
         
         if (!validateCPF(cpf)) {
-            showValidationError('CPF inválido! Digite apenas números (11 dígitos).');
+            alert('CPF inválido! Digite apenas números (11 dígitos).');
             return false;
         }
         
@@ -90,13 +89,18 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 
+    function saveAppointments() {
+        localStorage.setItem('consultasMedicas', JSON.stringify(appointments));
+    }
+
     function updateAppointmentsList() {
         if (appointments.length === 0) {
             appointmentsList.innerHTML = '<p class="empty-message">Nenhuma consulta agendada ainda.</p>';
             return;
         }
         
-        appointments = sortAppointments(appointments);
+        // Ordena por data mais próxima
+        appointments.sort((a, b) => new Date(a.date) - new Date(b.date));
         
         appointmentsList.innerHTML = '';
         
@@ -133,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const appointment = appointments[appointmentIndex];
             if (confirm(`Cancelar consulta de ${appointment.name}?`)) {
                 appointments.splice(appointmentIndex, 1);
-                saveAppointments(appointments);
+                saveAppointments();
                 updateAppointmentsList();
                 addToPrompt(`Consulta cancelada: ${appointment.specialty} para ${appointment.name}`);
             }
@@ -221,15 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showSuccessMessage(name) {
-        addToPrompt(`Consulta agendada com sucesso para ${name}!`, 'success');
-    }
-
-    function showValidationError(message) {
-        addToPrompt(message, 'error');
-    }
-
-    function sortAppointments(appointments) {
-        return appointments.sort((a, b) => new Date(a.date) - new Date(b.date));
+        alert(`Consulta agendada com sucesso para ${name}!`);
     }
 
     // Funções auxiliares de formatação
@@ -253,23 +249,10 @@ document.addEventListener('DOMContentLoaded', function() {
         return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
     }
 
-    function addToPrompt(text, type = 'normal') {
-        const p = document.createElement('p');
-        
-        if (type === 'command') {
-            p.style.color = '#3498db';
-            p.style.fontWeight = 'bold';
-        } 
-        else if (type === 'error') {
-            p.style.color = '#e74c3c';
-        }
-        else if (type === 'success') {
-            p.style.color = '#2ecc71';
-        }
-        
-        p.textContent = text;
-        promptOutput.appendChild(p);
-        promptOutput.scrollTop = promptOutput.scrollHeight;
+    function addToPrompt(message, type = 'message') {
+        const msgElement = document.createElement('p');
+        msgElement.className = type;
+        msgElement.textContent = message;
+        promptOutput.appendChild(msgElement);
     }
-
 });
