@@ -1,6 +1,7 @@
+import { loadAppointments, saveAppointments } from './storage.js';
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Carrega consultas do localStorage ao iniciar
-    let appointments = JSON.parse(localStorage.getItem('consultasMedicas')) || [];
+    let appointments = loadAppointments();
     
     // Elementos do DOM
     const appointmentForm = document.getElementById('appointmentForm');
@@ -49,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Criar e salvar consulta
         const appointment = createAppointment(name, cpf, specialty, date, time);
         appointments.push(appointment);
-        saveAppointments();
+        saveAppointments(appointments);
         
         // Feedback e atualização
         showSuccessMessage(name);
@@ -60,12 +61,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function validateForm(name, cpf, specialty, date, time) {
         if (!name || !cpf || !specialty || !date || !time) {
-            alert('Por favor, preencha todos os campos!');
+            showValidationError('Por favor, preencha todos os campos!');
             return false;
         }
         
         if (!validateCPF(cpf)) {
-            alert('CPF inválido! Digite apenas números (11 dígitos).');
+            showValidationError('CPF inválido! Digite apenas números (11 dígitos).');
             return false;
         }
         
@@ -89,18 +90,13 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 
-    function saveAppointments() {
-        localStorage.setItem('consultasMedicas', JSON.stringify(appointments));
-    }
-
     function updateAppointmentsList() {
         if (appointments.length === 0) {
             appointmentsList.innerHTML = '<p class="empty-message">Nenhuma consulta agendada ainda.</p>';
             return;
         }
         
-        // Ordena por data mais próxima
-        appointments.sort((a, b) => new Date(a.date) - new Date(b.date));
+        appointments = sortAppointments(appointments);
         
         appointmentsList.innerHTML = '';
         
@@ -137,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const appointment = appointments[appointmentIndex];
             if (confirm(`Cancelar consulta de ${appointment.name}?`)) {
                 appointments.splice(appointmentIndex, 1);
-                saveAppointments();
+                saveAppointments(appointments);
                 updateAppointmentsList();
                 addToPrompt(`Consulta cancelada: ${appointment.specialty} para ${appointment.name}`);
             }
@@ -225,7 +221,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showSuccessMessage(name) {
-        alert(`Consulta agendada com sucesso para ${name}!`);
+        addToPrompt(`Consulta agendada com sucesso para ${name}!`, 'success');
+    }
+
+    function showValidationError(message) {
+        addToPrompt(message, 'error');
+    }
+
+    function sortAppointments(appointments) {
+        return appointments.sort((a, b) => new Date(a.date) - new Date(b.date));
     }
 
     // Funções auxiliares de formatação
@@ -259,9 +263,13 @@ document.addEventListener('DOMContentLoaded', function() {
         else if (type === 'error') {
             p.style.color = '#e74c3c';
         }
+        else if (type === 'success') {
+            p.style.color = '#2ecc71';
+        }
         
         p.textContent = text;
         promptOutput.appendChild(p);
         promptOutput.scrollTop = promptOutput.scrollHeight;
     }
+
 });
